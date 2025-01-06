@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>PDF to Audio Converter</title>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-indigo-600 to-blue-500 font-[Inter]">
+    <div class="container mx-auto px-4 py-16 max-w-2xl">
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+            <h1 class="text-3xl font-semibold text-gray-800 mb-8 text-center">PDF to Audio Converter</h1>
+            
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <div class="mb-6 bg-blue-50 p-4 rounded-lg">
+                {% for message in messages %}
+                  <p class="text-blue-600">{{ message|safe }}</p>
+                {% endfor %}
+                </div>
+              {% endif %}
+            {% endwith %}
+
+            <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data" class="space-y-6">
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">Upload PDF</label>
+                    <div class="relative">
+                        <input type="file" name="file" id="fileInput" class="hidden" accept=".pdf"/>
+                        <label for="fileInput" class="cursor-pointer inline-flex items-center justify-center w-full px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Choose a PDF file
+                        </label>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="language" class="block text-sm font-medium text-gray-700">Select Language</label>
+                    <select name="language" id="language" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="english">English</option>
+                        <option value="hindi">Hindi</option>
+                        <option value="french">French</option>
+                        <option value="swahili">Kiswahili</option>
+                        <option value="zulu">Zulu</option>
+                        <option value="igbo">Igbo</option>
+                        <option value="yoruba">Yoruba</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Convert to Audio
+                </button>
+            </form>
+
+            <div id="progressContainer" class="hidden mt-6">
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progressBar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const form = this;
+            const formData = new FormData(form);
+            const xhr = new XMLHttpRequest();
+
+            xhr.open('POST', form.action, true);
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    document.getElementById('progressBar').textContent = `${percentComplete.toFixed(2)}%`;
+                    document.getElementById('progressBar').style.width = `${percentComplete.toFixed(2)}%`;
+                }
+            };
+
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    document.getElementById('progressContainer').style.display = 'none';
+                    form.reset();
+                    document.getElementById('progressBar').textContent = '0%';
+                    document.getElementById('progressBar').style.width = '0%';
+                    window.location.reload();
+                } else {
+                    alert('Error uploading file');
+                }
+            };
+
+            xhr.upload.onloadstart = function() {
+                document.getElementById('progressContainer').style.display = 'block';
+            };
+
+            xhr.upload.onloadend = function() {
+                // Check progress and update download link
+                fetch('/check_progress')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.progress === 100) {
+                            const audioLink = document.querySelector('.messages a');
+                            if (audioLink) {
+                                document.getElementById('downloadButton').href = audioLink.href;
+                                document.getElementById('downloadLink').style.display = 'block';
+                            }
+                        }
+                    });
+            };
+
+            xhr.send(formData);
+        });
+    </script>
+</body>
+</html>
